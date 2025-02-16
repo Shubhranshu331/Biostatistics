@@ -1,0 +1,106 @@
+# 1 Load the data
+
+german_data <- read.csv(file.choose(), header = FALSE, stringsAsFactors = TRUE)
+
+colnames(german_data) <- c("Status_of_existing_checking_account", "Duration_in_month",
+                           "Credit_history", "Purpose", "Credit_amount", "Savings_account_bond",
+                           "Employment_since", "Installment_rate_in_percentage_of_disposable_income",
+                           "Personal_status_sex", "Other_debtors_guarantors",
+                           "Residence_since", "Property_type", "Age_in_years",
+                           "Other_installment_plans", "Housing", "Number_of_existing_credits_at_this_bank",
+                           "Job", "Number_of_dependents", "Telephone", "Foreign_worker", "Credit_risk")
+
+# Print the first few rows to check:
+head(german_data)
+
+# Explore the data types:
+str(german_data)
+
+# Convert Credit_risk to 0 and 1 (0 = bad, 1 = good)
+german_data$Credit_risk <- ifelse(german_data$Credit_risk == 2, 0, 1)  # Assuming 2 is bad, 1 is good
+
+# Make sure 'Credit_risk' is binary (0 or 1)
+german_data$Credit_risk <- ifelse(german_data$Credit_risk == "Good", 1, 0)
+
+# Build the logistic regression model
+logit_model <- glm(Credit_risk ~ ., data = german_data, family = binomial(link = "logit"))
+
+# Display the model summary
+summary(logit_model)
+
+# Calculate AIC
+aic_value <- AIC(logit_model)
+print(aic_value)
+
+# Predict probabilities
+predictions <- predict(logit_model, type = "response")
+
+# Load the pROC library for ROC curve
+install.packages("pROC")
+library(pROC)
+
+
+# Convert Credit_risk to a factor with two levels
+german_data$Credit_risk <- factor(german_data$Credit_risk, levels = c("good", "bad"))
+
+# Check again to confirm
+levels(german_data$Credit_risk)
+
+
+# Check the distribution of the response variable
+table(german_data$Credit_risk)
+
+# Check for missing values
+sum(is.na(german_data$Credit_risk))
+
+# Verify the levels of the response variable
+levels(german_data$Credit_risk)
+
+# Check if the length of predictions matches the response variable
+length(predictions) == length(german_data$Credit_risk)
+
+# Create a subset of the data without missing Credit_risk values
+clean_data <- german_data[!is.na(german_data$Credit_risk), ]
+
+
+# Check the length of the response variable
+length(clean_data$Credit_risk)
+
+# Check the length of the predictor variable
+length(predictions)
+
+# Check for missing values in the response variable
+sum(is.na(clean_data$Credit_risk))
+
+# Remove rows with missing Credit_risk values
+clean_data <- german_data[!is.na(german_data$Credit_risk), ]
+
+# Ensure predictions correspond to the cleaned data
+# Note: Adjust the 'predictions' vector accordingly based on your data cleaning steps
+predictions <- predictions[!is.na(german_data$Credit_risk)]
+
+library(ROSE)
+# Set cost ratio
+cost_ratio <- 5
+roc_curve <- roc.curve(german_data$Credit_risk, predictions, plot = TRUE)
+# Find the optimal threshold
+coords <- coords(roc_curve, "best", ret = "threshold", best.method = "youden", cost.fp = cost_ratio, cost.fn = 1)
+optimal_threshold <- coords[1]
+print(optimal_threshold)
+
+# Apply the threshold to classify predictions
+predicted_classes <- ifelse(predictions > optimal_threshold, 1, 0)
+
+# Confusion matrix
+confusion_matrix <- table(Predicted = predicted_classes, Actual = german_data$Credit_risk)
+print(confusion_matrix)
+
+# Calculate accuracy
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+print(accuracy)
+
+roc_curve_reduced <- roc.curve(german_data$Credit_risk, predictions_reduced, plot = TRUE)
+auc_value_reduced <- attributes(roc_curve_reduced)$auc
+print(paste("AUC (Reduced Model):",auc_value_reduced))
+
+save.image()

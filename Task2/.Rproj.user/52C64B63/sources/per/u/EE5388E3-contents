@@ -1,0 +1,14 @@
+# Load the dataset
+german_data <- read.csv("C:/Users/pramod kumar yadav/Desktop/Kim Jong UN Confidentials/Projects/R Projects/Task2/german.data.csv")
+
+# Inspect the structure of the dataset
+str(german_data)
+
+# View the first few rows
+head(german_data)
+
+# Create the logistic regression model
+logistic_model <- glm(Response ~ ., data = german_data, family = binomial(link = "logit"))
+
+# View the model summary
+summary(logistic_model)
